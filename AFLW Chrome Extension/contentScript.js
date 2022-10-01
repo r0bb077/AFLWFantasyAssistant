@@ -83,7 +83,7 @@ function updatePlayers(players) {
         if (!score) {
             const averageScore = playerCardElement.querySelector(".font-light").lastChild?.textContent;
             expectedScore += parseInt(/[0-9]{1,3}/.exec(averageScore));
-            console.log(`No Score for ${name} adding average ${averageScore}`);
+            console.log(`No Score for ${name} adding average ${expectedScore}`);
             return;
         }
 
