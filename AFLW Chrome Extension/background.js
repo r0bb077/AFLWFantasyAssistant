@@ -29,7 +29,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name == "checkAndInjectContentScript") {
     let secondsToCheckAgain = 60;
-    if (await isGameWeekLive()) {
+    if (await isMatchInProgress()) {
       injectData();
       secondsToCheckAgain = 5;
     }
@@ -68,7 +68,7 @@ async function processGetPlayerDataRequest() {
   }
 }
 
-async function isGameWeekLive() {
+async function isMatchInProgress() {
   return await new Promise(async (resolve) => {
     let resolveOutcome = false;
     const storageItem = await chrome.storage.local.get("NextMatch");
