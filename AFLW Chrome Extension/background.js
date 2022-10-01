@@ -30,9 +30,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name == "checkAndInjectContentScript") {
     let secondsToCheckAgain = 60;
     if (await isMatchInProgress()) {
-      injectData();
+      // Update more frequently during a game
       secondsToCheckAgain = 5;
-    }
+    }    
+    injectData();
     checkAndInjectContentScriptAlarm(secondsToCheckAgain);
   }
 });
@@ -73,9 +74,6 @@ async function isMatchInProgress() {
     let resolveOutcome = false;
     const storageItem = await chrome.storage.local.get("NextMatch");
     if (storageItem.NextMatch) {
-      const now = new Date();
-      const matchStart = new Date(storageItem.NextMatch.date);
-
       const token = await getToken();
       const matches = await getRoundMatches(storageItem.NextMatch.round, token);
       for (const [index, match] of matches.items.entries()) {
