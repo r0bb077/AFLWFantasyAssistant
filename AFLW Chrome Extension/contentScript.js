@@ -24,11 +24,11 @@ function loopNodesFindTextNode(node) {
     return returnNode;
 }
 
-function insertLiveScoreCard(liveScore) {
+function insertLiveScoreCard(liveScore, expectedScore) {
     let liveScoreCard = document.querySelector(".aflwLiveScoreCard");
     if (liveScoreCard != null) {
         const textNode = loopNodesFindTextNode(liveScoreCard);
-        textNode.textContent = liveScore;
+        textNode.textContent = `${liveScore} (${(liveScore + expectedScore)})`;
         return;
     }
 
@@ -44,14 +44,20 @@ function insertLiveScoreCard(liveScore) {
     liveScoreCard = document.querySelector("#main .grid").childNodes[6];
 
     const textNode = loopNodesFindTextNode(liveScoreCard);
-    textNode.textContent = liveScore;
-    liveScoreCard.querySelector("span").innerText = "Live Score";
+    textNode.textContent = `${liveScore} (${(liveScore + expectedScore)})`;
+    liveScoreCard.querySelector("span").innerText = "Live Score (expected)";
     liveScoreCard.classList.add("aflwLiveScoreCard");
 }
 
 function updatePlayers(players) {
     let totalScore = 0;
+    let expectedScore = 0;
+
+    const namesAdded = [];
+
     [...document.querySelectorAll(".aflwCustomCard, .px-6")].forEach((playerCardElement) => {
+        if(playerCardElement.closest(".aflwCustomCard") === null) return;
+
         let nameSplit = playerCardElement.querySelector(".px-1")?.childNodes[0]?.textContent?.trim()?.split(" ");
         if (!nameSplit) {
             nameSplit = [...playerCardElement.childNodes].find(x => x.nodeType === Node.TEXT_NODE)?.textContent?.trim()?.split(" ");
@@ -61,12 +67,25 @@ function updatePlayers(players) {
         let name = "";
         for (var i = 0; i < 2; i++) name += nameSplit[i] + " ";
 
+        if(namesAdded.indexOf(name) !== -1){
+            return;
+        }
+
+        namesAdded.push(name);
+
         let score = 0;
         players.forEach((player) => {
             if (player.givenName + " " + player.surname == name.trim()) {
                 score = player.points;
             }
         })
+
+        if (!score) {
+            const averageScore = playerCardElement.querySelector(".font-light").lastChild?.textContent;
+            expectedScore += parseInt(/[0-9]{1,3}/.exec(averageScore));
+            console.log(`No Score for ${name} adding average ${averageScore}`);
+            return;
+        }
 
         const scoreElement = playerCardElement.getElementsByTagName("strong")[0];
         const currentScore = parseInt(scoreElement.innerText);
@@ -104,7 +123,7 @@ function updatePlayers(players) {
         }
     });
 
-    insertLiveScoreCard(totalScore);
+    insertLiveScoreCard(totalScore, expectedScore);
 }
 
 function updateCardLayout(playerCardElement) {
@@ -171,5 +190,16 @@ function updateCardLayouts() {
     }
 }
 
+function updateSubLayouts() {
+    const playerCardElements = [...document.querySelectorAll("#main > div.hidden > div.bg-white.shadow.rounded-md.mt-5.px-4.py-2.border-b.border-gray-200 > div > div > div > div > table tr")];
+
+    for (const [index, playerCardElement] of playerCardElements.entries()) {
+        if(playerCardElement.classList.contains("py-2")) continue;
+
+        playerCardElement.classList.add("aflwCustomCard");
+    }
+}
+
 updateCardLayouts();
+updateSubLayouts();
 getPlayerData();
