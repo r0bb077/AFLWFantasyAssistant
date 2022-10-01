@@ -1,0 +1,16 @@
+{
+  "name": "Hello, World!",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {},
+  "permissions":["alarms", "tabs", "scripting", "storage"],
+  "host_permissions": [
+    "http://api.afl.com.au/",
+    "https://api.afl.com.au/",
+    "https://www.aflwfantasy.com.au/*",    
+    "https://aflwfantasy.com.au/*"
+  ]
+}
