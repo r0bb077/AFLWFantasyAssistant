@@ -79,15 +79,19 @@ async function isGameWeekLive() {
       const token = await getToken();
       const matches = await getRoundMatches(storageItem.NextMatch.round, token);
       for (const [index, match] of matches.items.entries()) {
-        if (match.match.matchId === storageItem.NextMatch.matchId) {
+        if (match.match.matchId === storageItem.NextMatch.matchId) {         
           console.log(`Stored match status ${match.match.abbr} is ${match.match.status}`);
+          chrome.storage.local.set({
+            NextMatch: match.match
+          });
           if (match.match.status === "CONFIRMED_TEAMS" ||
-            match.match.status === "LIVE") {
+            match.match.status === "LIVE" ||
+            match.match.status === "POSTGAME") {
             resolveOutcome = true;
             break;
           }
 
-          if (match.match.status === "POSTGAME" || match.match.status === "CONCLUDED") {
+          if (match.match.status === "CONCLUDED") {
             console.log(`Match has finished, removing match from storage`);
             await chrome.storage.local.remove("NextMatch");
             await findNextMatch();
@@ -124,7 +128,7 @@ async function findNextMatch() {
   for (let i = 1; i <= maxRounds; i++) {
     const matches = await getRoundMatches(getFormattedRoundNo(i), token);
     for (const [index, match] of matches.items.entries()) {
-      if (match.match.status !== "POSTGAME" && match.match.status !== "CONCLUDED") {
+      if (match.match.status !== "CONCLUDED") {
         nextMatch = match.match;
         break;
       }
