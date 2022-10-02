@@ -29,10 +29,13 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name == "checkAndInjectContentScript") {
     let secondsToCheckAgain = 60;
-    if (await isMatchInProgress()) {
+    let currentGameWeekInfo = await getCurrentGameWeek();
+    console.log("Current GameWeek Info", currentGameWeekInfo);
+    if (currentGameWeekInfo.isGameWeekComplete === false) {
       // Update more frequently during a game
       secondsToCheckAgain = 5;
     }    
+    await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
     injectData();
     checkAndInjectContentScriptAlarm(secondsToCheckAgain);
   }
@@ -45,28 +48,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function processGetPlayerDataRequest() {
+async function updatePlayerDataInStorage(round, timeDiffThreshold){
   const lastUpdatedDate = await getLastUpdatedDate();
 
   if (!isNaN(lastUpdatedDate)) {
     const timeDiffInSeconds = (new Date().getTime() - lastUpdatedDate) / 1000;
-    if (timeDiffInSeconds <= 15) {
+    if (timeDiffInSeconds <= timeDiffThreshold) {
       const playerData = (await chrome.storage.local.get("PlayerData")).PlayerData;
       if (Array.isArray(playerData)) {
-        console.log("Made a request within last 15 seconds, using cached data");
-        return {
-          players: playerData
-        };
+        console.log(`Made a request within last ${timeDiffThreshold} seconds, will use cached data`);
+        return;
       }
     }
   }
 
   console.log("Getting fresh data");
-  const nextMatch = await chrome.storage.local.get("NextMatch");
-
+  await getAllPlayerRoundInfo(round)
+}
+async function processGetPlayerDataRequest() {
   return {
-    players: await getAllPlayerRoundInfo(nextMatch.NextMatch.round)
-  }
+    players: (await chrome.storage.local.get("PlayerData")).PlayerData
+  };
 }
 
 async function isMatchInProgress() {
@@ -114,6 +116,36 @@ function getFormattedRoundNo(int) {
   }
 
   return `CD_R2101264${int}`;
+}
+
+async function getCurrentGameWeek(){
+  console.log("Finding next match");
+
+  const maxRounds = 10;
+  const token = await getToken();
+  let currentGameweekRound;
+  let isGameWeekComplete = false;
+
+  for (let i = 1; i <= maxRounds; i++) {
+    const matches = await getRoundMatches(getFormattedRoundNo(i), token);
+    const finishedMatches = matches.items.filter(match => match.match.status === "CONCLUDED");
+    if(finishedMatches.length == matches.items.length){
+      currentGameweekRound = matches.items[0].match.round;
+      isGameWeekComplete = true;
+    } else {
+      const liveMatches = matches.items.filter(match => match.match.status === "LIVE");
+      if(liveMatches.length > 0){
+        currentGameweekRound = matches.items[0].match.round;
+        isGameWeekComplete = false;
+        break;
+      }
+    }
+  }
+
+  return {
+    CurrentGameWeekRound: currentGameweekRound,
+    IsGameWeekComplete: isGameWeekComplete
+  };
 }
 
 async function findNextMatch() {
