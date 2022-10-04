@@ -31,7 +31,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     let secondsToCheckAgain = 60;
     let currentGameWeekInfo = await getCurrentGameWeek();
     console.log("Current GameWeek Info", currentGameWeekInfo);
-    if (currentGameWeekInfo.isGameWeekComplete === false) {
+    if (currentGameWeekInfo.IsGameweekLive === true) {
       // Update more frequently during a game
       secondsToCheckAgain = 5;
       await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
@@ -124,20 +124,20 @@ async function getCurrentGameWeek(){
   const maxRounds = 10;
   const token = await getToken();
   let currentGameweekRound;
-  let isGameWeekComplete = false;
+  let isGameweekLive = false;
 
   for (let i = 1; i <= maxRounds; i++) {
     const matches = await getRoundMatches(getFormattedRoundNo(i), token);
     const finishedMatches = matches.items.filter(match => match.match.status === "CONCLUDED");
     if(finishedMatches.length == matches.items.length){
       currentGameweekRound = matches.items[0].match.round;
-      isGameWeekComplete = true;
+      isGameweekLive = false;
     } else {
       const liveMatches = matches.items.filter(match => match.match.status === "LIVE");
       const scheduledMatches = matches.items.filter(match => match.match.status === "SCHEDULED");
       if(liveMatches.length > 0 || scheduledMatches.length != matches.items.length){
         currentGameweekRound = matches.items[0].match.round;
-        isGameWeekComplete = false;
+        isGameweekLive = true;
         break;
       }
     }
@@ -145,7 +145,7 @@ async function getCurrentGameWeek(){
 
   return {
     CurrentGameWeekRound: currentGameweekRound,
-    IsGameWeekComplete: isGameWeekComplete
+    IsGameweekLive: isGameweekLive
   };
 }
 
