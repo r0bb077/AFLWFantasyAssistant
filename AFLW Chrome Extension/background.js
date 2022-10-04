@@ -25,6 +25,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 async function checkAndInjectContentScriptAlarmCallBack(){
+  injectData();
+
   let secondsToCheckAgain = 60;
   let currentGameWeekInfo = await getCurrentGameWeek();
   console.log("Current GameWeek Info", currentGameWeekInfo);
@@ -32,8 +34,7 @@ async function checkAndInjectContentScriptAlarmCallBack(){
     // Update more frequently during a game
     await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
     console.log("Will check again in 5 seconds");
-    checkAndInjectContentScriptAlarm(5);
-    injectData();
+    checkAndInjectContentScriptAlarm(5);    
   } else {
     const nextMatch = await findAndStoreNextMatch();
     if (nextMatch) {
