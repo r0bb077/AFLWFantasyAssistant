@@ -16,28 +16,44 @@ async function getLastUpdatedDate() {
 
 chrome.runtime.onStartup.addListener(async () => {
   console.log("runtime.onStartup");
-  await findAndStoreNextMatch();
-  checkAndInjectContentScriptAlarm();
+  await checkAndInjectContentScriptAlarmCallBack();
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
   console.log("runtime.onInstalled");
-  await findAndStoreNextMatch();
-  checkAndInjectContentScriptAlarm();
+  await checkAndInjectContentScriptAlarmCallBack();
 });
+
+async function checkAndInjectContentScriptAlarmCallBack(){
+  let secondsToCheckAgain = 60;
+  let currentGameWeekInfo = await getCurrentGameWeek();
+  console.log("Current GameWeek Info", currentGameWeekInfo);
+  if (currentGameWeekInfo.IsGameweekLive === true) {
+    // Update more frequently during a game
+    await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
+    console.log("Will check again in 5 seconds");
+    checkAndInjectContentScriptAlarm(5);
+    injectData();
+  } else {
+    const nextMatch = await findAndStoreNextMatch();
+    if (nextMatch) {
+      const date = new Date(nextMatch.utcStartTime + "Z");
+      const timeDiffUntiNextMatchStarts = date - new Date().getTime();
+      console.log("Next Gameweek match starts:", date, "Milliseconds Until Start", timeDiffUntiNextMatchStarts);
+      if (timeDiffUntiNextMatchStarts < 3600000) {
+        console.log("Will check again in a minute");
+        checkAndInjectContentScriptAlarm(60);
+      } else {
+        console.log("Will check again in a hour");
+        checkAndInjectContentScriptAlarm(60 * 60);
+      }
+    }
+  }
+}
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name == "checkAndInjectContentScript") {
-    let secondsToCheckAgain = 60;
-    let currentGameWeekInfo = await getCurrentGameWeek();
-    console.log("Current GameWeek Info", currentGameWeekInfo);
-    if (currentGameWeekInfo.IsGameweekLive === true) {
-      // Update more frequently during a game
-      secondsToCheckAgain = 5;
-      await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
-      checkAndInjectContentScriptAlarm(secondsToCheckAgain);
-      injectData();
-    }
+    checkAndInjectContentScriptAlarmCallBack();
   }
 });
 
@@ -128,7 +144,6 @@ async function getCurrentGameWeek(){
 
   for (let i = 1; i <= maxRounds; i++) {
     const matches = await getRoundMatches(getFormattedRoundNo(i), token);
-    currentGameweekRound = matches.items[0].match.round;
     const finishedMatches = matches.items.filter(match => match.match.status === "CONCLUDED");
     if(finishedMatches.length == matches.items.length){
       isGameweekLive = false;
@@ -147,7 +162,7 @@ async function getCurrentGameWeek(){
         isGameweekLive = true;
         currentGameweekRound = matches.items[0].match.round;
       }
-        break;
+      break;
     }
   }
 
