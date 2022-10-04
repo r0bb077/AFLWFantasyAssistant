@@ -134,7 +134,8 @@ async function getCurrentGameWeek(){
       isGameWeekComplete = true;
     } else {
       const liveMatches = matches.items.filter(match => match.match.status === "LIVE");
-      if(liveMatches.length > 0){
+      const scheduledMatches = matches.items.filter(match => match.match.status === "SCHEDULED");
+      if(liveMatches.length > 0 || scheduledMatches.length != matches.items.length){
         currentGameweekRound = matches.items[0].match.round;
         isGameWeekComplete = false;
         break;
