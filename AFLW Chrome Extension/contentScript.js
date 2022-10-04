@@ -1,3 +1,6 @@
+// Usually the trades option only appears when lockout is open and scors are updated
+const isGameInLockout = document.getElementById("trades") == null;
+
 function getPlayerData() {
     console.log("Getting player data");
     chrome.runtime.sendMessage({
@@ -83,7 +86,6 @@ function updatePlayers(players) {
         if (!score) {
             const averageScore = playerCardElement.querySelector(".font-light").lastChild?.textContent;
             expectedScore += parseInt(/[0-9]{1,3}/.exec(averageScore));
-            console.log(`No Score for ${name} adding average ${expectedScore}`);
             return;
         }
 
@@ -123,7 +125,9 @@ function updatePlayers(players) {
         }
     });
 
-    insertLiveScoreCard(totalScore, expectedScore);
+    if(!isGameInLockout){
+        insertLiveScoreCard(totalScore, expectedScore);
+    }
 }
 
 function updateCardLayout(playerCardElement) {
@@ -175,7 +179,6 @@ function updateCardLayout(playerCardElement) {
 
     playerDataContainer.appendChild(playerData);
 
-    console.log([...playerDataContainer.querySelector(".font-light")?.childNodes]);
     const scoreElem = [...playerDataContainer.querySelector(".font-light")?.childNodes].find(child => child.textContent?.trim() === "Score");
     scoreElem?.nextSibling?.remove();
     scoreElem?.remove();
@@ -202,4 +205,7 @@ function updateSubLayouts() {
 
 updateCardLayouts();
 updateSubLayouts();
-getPlayerData();
+
+if(document.getElementById("trades") == null){
+    getPlayerData();
+}
