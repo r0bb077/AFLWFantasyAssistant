@@ -119,7 +119,7 @@ function getFormattedRoundNo(int) {
 }
 
 async function getCurrentGameWeek(){
-  console.log("Finding next match");
+  console.log("Finding current gameweek");
 
   const maxRounds = 10;
   const token = await getToken();
@@ -128,15 +128,21 @@ async function getCurrentGameWeek(){
 
   for (let i = 1; i <= maxRounds; i++) {
     const matches = await getRoundMatches(getFormattedRoundNo(i), token);
+    currentGameweekRound = matches.items[0].match.round;
     const finishedMatches = matches.items.filter(match => match.match.status === "CONCLUDED");
     if(finishedMatches.length == matches.items.length){
-      currentGameweekRound = matches.items[0].match.round;
       isGameweekLive = false;
     } else {
       const liveMatches = matches.items.filter(match => match.match.status === "LIVE");
-      const scheduledMatches = matches.items.filter(match => match.match.status === "SCHEDULED");
-      if(liveMatches.length > 0 || scheduledMatches.length != matches.items.length){
-        currentGameweekRound = matches.items[0].match.round;
+      if(liveMatches.length > 0){
+        isGameweekLive = true;
+        break;
+      }
+
+      // If the first game isn't scheduled and there is a scheduled game in the list then this is current gameweek
+      const isFirstMatchScheduled = matches.items[0].match.status === "SCHEDULED";
+      const isThereAScheduledMatchInTheList = matches.items.find(match => match.match.status === "SCHEDULED") != null;
+      if(!isFirstMatchScheduled && isThereAScheduledMatchInTheList){
         isGameweekLive = true;
         break;
       }
