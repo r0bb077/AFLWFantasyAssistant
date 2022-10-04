@@ -6,6 +6,10 @@
     background-color: #45f3b3;
 }
 
+.aflwExpectedScoreCard > .px-4{
+    background-color: #f4f676;
+}
+
 .aflwCustomCard{
     flex-direction: column;
     align-items: center;

@@ -27,11 +27,11 @@ function loopNodesFindTextNode(node) {
     return returnNode;
 }
 
-function insertLiveScoreCard(liveScore, expectedScore) {
-    let liveScoreCard = document.querySelector(".aflwLiveScoreCard");
-    if (liveScoreCard != null) {
-        const textNode = loopNodesFindTextNode(liveScoreCard);
-        textNode.textContent = `${liveScore} (${(liveScore + expectedScore)})`;
+function addScoreCard(className, label, value){
+    let scoreCard = document.querySelector("." + className);
+    if (scoreCard != null) {
+        const textNode = loopNodesFindTextNode(scoreCard);
+        textNode.textContent = value;
         return;
     }
 
@@ -41,15 +41,28 @@ function insertLiveScoreCard(liveScore, expectedScore) {
 
     const firstScoreCard = scoreCardGrid.childNodes[0];
 
-    liveScoreCard = document.createElement("div");
-    scoreCardGrid.appendChild(liveScoreCard);
-    liveScoreCard.innerHTML = firstScoreCard.innerHTML;
-    liveScoreCard = document.querySelector("#main .grid").childNodes[6];
+    scoreCard = document.createElement("div");
+    scoreCardGrid.appendChild(scoreCard);
+    scoreCard.innerHTML = firstScoreCard.innerHTML;
+    scoreCard = document.querySelector("#main .grid").childNodes[6];
 
-    const textNode = loopNodesFindTextNode(liveScoreCard);
-    textNode.textContent = `${liveScore} (${(liveScore + expectedScore)})`;
-    liveScoreCard.querySelector("span").innerText = "Live Score (expected)";
-    liveScoreCard.classList.add("aflwLiveScoreCard");
+    const textNode = loopNodesFindTextNode(scoreCard);
+    textNode.textContent = value;
+    scoreCard.querySelector("span").innerText = label;
+    scoreCard.classList.add(className);
+}
+
+function insertLiveScoreCard(liveScore, expectedScore) {
+    let expectedScoreCard = document.querySelector(".aflwExpectedScoreCard");
+    if(expectedScoreCard){
+        expectedScore.remove();
+    }
+
+    addScoreCard("aflwLiveScoreCard", "Live Score (expected)", `${liveScore} (${(liveScore + expectedScore)})`);
+}
+
+function insertExpectedScoreCard(expectedScore) {
+    addScoreCard("aflwExpectedScoreCard", "Expected Score", expectedScore);
 }
 
 function updatePlayers(players) {
@@ -83,19 +96,21 @@ function updatePlayers(players) {
             }
         })
 
-        if (!score) {
-            const averageScore = playerCardElement.querySelector(".font-light").lastChild?.textContent;
-            expectedScore += parseInt(/[0-9]{1,3}/.exec(averageScore));
-            return;
-        }
-
-        const scoreElement = playerCardElement.getElementsByTagName("strong")[0];
-        const currentScore = parseInt(scoreElement.innerText);
-
+        const isOnField = playerCardElement.closest(".m-3") != null;
         const isCaptain = playerCardElement.querySelector(".bg-red-200") != null;
         if (isCaptain) {
             score = score * 2;
         }
+
+        if (!score || !isGameInLockout && isOnField) {
+            const averageScore = playerCardElement.querySelector(".font-light").lastChild?.textContent;
+            const parsedScore = parseInt(/[0-9]{1,3}/.exec(averageScore));
+            expectedScore += isCaptain === true ? parsedScore * 2 : parsedScore;
+            return;
+        }
+
+        const scoreElement = playerCardElement.getElementsByTagName("strong")[0];
+        const currentScore = parseInt(scoreElement.innerText);        
 
         let classToAdd;
         if (currentScore < score) {
@@ -118,15 +133,15 @@ function updatePlayers(players) {
 
         scoreElement.innerText = score;
 
-        const isOnField = playerCardElement.closest(".m-3") != null;
-
         if (isOnField) {
             totalScore += score;
         }
     });
 
-    if(!isGameInLockout){
+    if(isGameInLockout){
         insertLiveScoreCard(totalScore, expectedScore);
+    } else {
+        insertExpectedScoreCard(expectedScore);
     }
 }
 
@@ -205,7 +220,4 @@ function updateSubLayouts() {
 
 updateCardLayouts();
 updateSubLayouts();
-
-if(document.getElementById("trades") == null){
-    getPlayerData();
-}
+getPlayerData();
