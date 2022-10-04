@@ -132,11 +132,12 @@ async function getCurrentGameWeek(){
     const finishedMatches = matches.items.filter(match => match.match.status === "CONCLUDED");
     if(finishedMatches.length == matches.items.length){
       isGameweekLive = false;
+      currentGameweekRound = matches.items[0].match.round;
     } else {
       const liveMatches = matches.items.filter(match => match.match.status === "LIVE");
       if(liveMatches.length > 0){
         isGameweekLive = true;
-        break;
+        currentGameweekRound = matches.items[0].match.round;
       }
 
       // If the first game isn't scheduled and there is a scheduled game in the list then this is current gameweek
@@ -144,8 +145,9 @@ async function getCurrentGameWeek(){
       const isThereAScheduledMatchInTheList = matches.items.find(match => match.match.status === "SCHEDULED") != null;
       if(!isFirstMatchScheduled && isThereAScheduledMatchInTheList){
         isGameweekLive = true;
-        break;
+        currentGameweekRound = matches.items[0].match.round;
       }
+        break;
     }
   }
 
