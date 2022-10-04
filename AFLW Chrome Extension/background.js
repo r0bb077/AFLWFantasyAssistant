@@ -4,16 +4,6 @@ function checkAndInjectContentScriptAlarm(secondsForNextAlarm = 5) {
   });
 }
 
-function updateLastUpdatedDate() {
-  chrome.storage.local.set({
-    LastUpdatedDate: new Date().getTime()
-  });
-}
-
-async function getLastUpdatedDate() {
-  return (await chrome.storage.local.get("LastUpdatedDate"))?.LastUpdatedDate;
-}
-
 chrome.runtime.onStartup.addListener(async () => {
   console.log("runtime.onStartup");
   await checkAndInjectContentScriptAlarmCallBack();
@@ -25,14 +15,11 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 async function checkAndInjectContentScriptAlarmCallBack(){
-  injectData();
 
-  let secondsToCheckAgain = 60;
   let currentGameWeekInfo = await getCurrentGameWeek();
-  console.log("Current GameWeek Info", currentGameWeekInfo);
+  console.log("Current GameWeek Info", currentGameWeekInfo);  
+
   if (currentGameWeekInfo.IsGameweekLive === true) {
-    // Update more frequently during a game
-    await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
     console.log("Will check again in 5 seconds");
     checkAndInjectContentScriptAlarm(5);    
   } else {
@@ -50,6 +37,9 @@ async function checkAndInjectContentScriptAlarmCallBack(){
       }
     }
   }
+
+  await getAllPlayerRoundInfo(currentGameWeekInfo.CurrentGameWeekRound);
+  injectData();
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -65,64 +55,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function updatePlayerDataInStorage(round, timeDiffThreshold){
-  const lastUpdatedDate = await getLastUpdatedDate();
-
-  if (!isNaN(lastUpdatedDate)) {
-    const timeDiffInSeconds = (new Date().getTime() - lastUpdatedDate) / 1000;
-    if (timeDiffInSeconds <= timeDiffThreshold) {
-      const playerData = (await chrome.storage.local.get("PlayerData")).PlayerData;
-      if (Array.isArray(playerData)) {
-        console.log(`Made a request within last ${timeDiffThreshold} seconds, will use cached data`);
-        return;
-      }
-    }
-  }
-
-  console.log("Getting fresh data");
-  await getAllPlayerRoundInfo(round)
-}
 async function processGetPlayerDataRequest() {
   return {
     players: (await chrome.storage.local.get("PlayerData")).PlayerData
   };
-}
-
-async function isMatchInProgress() {
-  return await new Promise(async (resolve) => {
-    let resolveOutcome = false;
-    const storageItem = await chrome.storage.local.get("NextMatch");
-    if (storageItem.NextMatch) {
-      const token = await getToken();
-      const matches = await getRoundMatches(storageItem.NextMatch.round, token);
-      for (const [index, match] of matches.items.entries()) {
-        if (match.match.matchId === storageItem.NextMatch.matchId) {         
-          console.log(`Stored match status ${match.match.abbr} is ${match.match.status}`);
-          chrome.storage.local.set({
-            NextMatch: match.match
-          });
-          if (match.match.status === "CONFIRMED_TEAMS" ||
-            match.match.status === "LIVE" ||
-            match.match.status === "POSTGAME") {
-            resolveOutcome = true;
-            break;
-          }
-
-          if (match.match.status === "CONCLUDED") {
-            console.log(`Match has finished, removing match from storage`);
-            await chrome.storage.local.remove("NextMatch");
-            await findAndStoreNextMatch();
-            break;
-          }
-        }
-      }
-    } else {
-      await findAndStoreNextMatch();
-    }
-
-    console.log("Is Gameweek live", resolveOutcome);
-    resolve(resolveOutcome);
-  });
 }
 
 function getFormattedRoundNo(int) {
@@ -200,23 +136,6 @@ async function findAndStoreNextMatch() {
   return nextMatch;
 }
 
-async function updateNextMatch() {
-  chrome.storage.local.get("NextMatch", async (match) => {
-    if (!match.NextMatch) {
-      await findAndStoreNextMatch();
-    } else {
-      const now = new Date();
-      const matchStart = new Date(match.NextMatch.date);
-
-      console.log(`Next Match stored starts at ${matchStart}`);
-
-      if (matchStart < now) {
-        await findAndStoreNextMatch();
-      }
-    }
-  });
-}
-
 async function injectData() {
   const tabs = await chrome.tabs.query({});
 
@@ -245,7 +164,6 @@ async function getAllPlayerRoundInfo(round) {
   const token = await getToken();
   const roundMatches = await getRoundMatches(round, token);
   const players = await getAllPlayerData(roundMatches);
-  updateLastUpdatedDate();
   chrome.storage.local.set({
     PlayerData: players
   });
