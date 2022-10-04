@@ -16,13 +16,13 @@ async function getLastUpdatedDate() {
 
 chrome.runtime.onStartup.addListener(async () => {
   console.log("runtime.onStartup");
-  await findNextMatch();
+  await findAndStoreNextMatch();
   checkAndInjectContentScriptAlarm();
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
   console.log("runtime.onInstalled");
-  await findNextMatch();
+  await findAndStoreNextMatch();
   checkAndInjectContentScriptAlarm();
 });
 
@@ -34,10 +34,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (currentGameWeekInfo.isGameWeekComplete === false) {
       // Update more frequently during a game
       secondsToCheckAgain = 5;
-    }    
-    await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
-    injectData();
-    checkAndInjectContentScriptAlarm(secondsToCheckAgain);
+      await updatePlayerDataInStorage(currentGameWeekInfo.CurrentGameWeekRound, secondsToCheckAgain);
+      checkAndInjectContentScriptAlarm(secondsToCheckAgain);
+      injectData();
+    }
   }
 });
 
@@ -94,13 +94,13 @@ async function isMatchInProgress() {
           if (match.match.status === "CONCLUDED") {
             console.log(`Match has finished, removing match from storage`);
             await chrome.storage.local.remove("NextMatch");
-            await findNextMatch();
+            await findAndStoreNextMatch();
             break;
           }
         }
       }
     } else {
-      await findNextMatch();
+      await findAndStoreNextMatch();
     }
 
     console.log("Is Gameweek live", resolveOutcome);
@@ -148,7 +148,7 @@ async function getCurrentGameWeek(){
   };
 }
 
-async function findNextMatch() {
+async function findAndStoreNextMatch() {
   console.log("Finding next match");
 
   const maxRounds = 10;
@@ -171,12 +171,14 @@ async function findNextMatch() {
   chrome.storage.local.set({
     NextMatch: nextMatch
   });
+
+  return nextMatch;
 }
 
 async function updateNextMatch() {
   chrome.storage.local.get("NextMatch", async (match) => {
     if (!match.NextMatch) {
-      await findNextMatch();
+      await findAndStoreNextMatch();
     } else {
       const now = new Date();
       const matchStart = new Date(match.NextMatch.date);
@@ -184,7 +186,7 @@ async function updateNextMatch() {
       console.log(`Next Match stored starts at ${matchStart}`);
 
       if (matchStart < now) {
-        await findNextMatch();
+        await findAndStoreNextMatch();
       }
     }
   });
