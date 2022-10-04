@@ -14,15 +14,15 @@ async function getLastUpdatedDate() {
   return (await chrome.storage.local.get("LastUpdatedDate"))?.LastUpdatedDate;
 }
 
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(async () => {
   console.log("runtime.onStartup");
-  findNextMatch();
+  await findNextMatch();
   checkAndInjectContentScriptAlarm();
 });
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log("runtime.onInstalled");
-  findNextMatch();
+  await findNextMatch();
   checkAndInjectContentScriptAlarm();
 });
 
